@@ -70,6 +70,34 @@ def main():
             redshifts = array.array('d',z)
             distances = array.array('d',d)
             return redshifts,distances
+        
+        def ICD(self,zArray):
+        #Input a redshift array into this method to get distance array calculated by interoplation
+            z,dArray = self.cumulativeTrapezoid(1,50)
+            f = interp1d(np.array(z),np.array(dArray))
+            ICDarray=[]
+            for z in zArray:
+                ICDarray.append(f(z))
+            return array.array('d',ICDarray)
+        
+        def ICM(self,zArray,megaParsecs):
+        #Input a redshift array into this method to get moduli array calculated by interpolation
+            z,dArray = self.cumulativeTrapezoid(1,50)
+            f = interp1d(np.array(z),np.array(dArray))
+            ICMarray=[]
+            for z in zArray:
+                x = self.Omega_k**0.5*self.H0/(3*10**8)*f(z)
+                if self.Omega_k > 0:
+                   s=np.sinh(x)
+                elif self.Omega_k == 0:
+                   s=x
+                elif self.Omega_k < 0:
+                   s=np.sin(x)
+                DL = (1+z)*3*10**8/self.H0*1/(abs(self.Omega_k)**0.5)*s
+                u = 5*np.log10(DL/megaParsecs)+25
+                ICMarray.append(u)
+            return array.array('d',ICMarray)
+
 
 
     #Tester Functions
@@ -105,105 +133,83 @@ def main():
         .trapezoid: Retures the distance(mpc) calculated by trapezoid rule.
         .Simpson:  Retures the distance(mpc) calculated by Simpson's rule.
     """
-    #print(newCosmology.rectangle(1,50))
-    #print(newCosmology.trapezoid(1,50))
-    #print(newCosmology.Simpson(1,50))
-    
+    def testing41(cosmology):
+        print(cosmology.rectangle(1,50))
+        print(cosmology.trapezoid(1,50))
+        print(cosmology.Simpson(1,50))
+    #testing41(newCosmology)
 
     # 4.2---High Precise Estimate
     HPDistance = newCosmology.Simpson(1,10000)
-    #with open("documentText",'w',encoding='utf-8') as file:
-        #file.write(str(HPDistance))
 
     # 4.2---Absolute Fractional Error Plot
-    def errorPlot(step,startNumber,endNumber):
+    def errorPlot(cosmology,step,startNumber,endNumber):
         errorR = []  
         errorT = []
         errorS = []
         n = []  
         for i in range(math.floor(startNumber/step),math.floor(endNumber/step)):
-           n.append(i*step)
-           errorR.append(abs(newCosmology.rectangle(1,i*step)-HPDistance)/HPDistance)
-           errorT.append(abs(newCosmology.trapezoid(1,i*step)-HPDistance)/HPDistance)
-           errorS.append(abs(newCosmology.Simpson(1,i*step)-HPDistance)/HPDistance)
+            n.append(i*step)
+            errorR.append(abs(cosmology.rectangle(1,i*step)-HPDistance)/HPDistance)
+            errorT.append(abs(cosmology.trapezoid(1,i*step)-HPDistance)/HPDistance)
+            errorS.append(abs(cosmology.Simpson(1,i*step)-HPDistance)/HPDistance)
     
         plt.clf()
-        #plt.plot(n,errorR)
-        #plt.plot(n,errorT)
-        #plt.plot(n,errorS)
-        plt.title(f'Error of Simpson Estimation versus point number')
+        plt.plot(n,errorR)
+        plt.plot(n,errorT)
+        plt.scatter(n,errorS)
+        plt.title(f'Absolute Fractional Error versus point number')
         plt.xlabel('Point Number')
         plt.ylabel('Absolute Fractional Error')
-        plt.savefig('errorPlotS.png')
-    
-    #errorPlot(1,10,100)
+        plt.savefig('errorPlot.png')
+    #This function gives plot about 3 absolute fractional errors versus step numbers
+    #errorPlot(newCosmology,10,10,1000)
 
-    # 4.3---Cumulative Trapezoid and Testing
-    # The CT method in Cosmology Class outputs 2 lists.
-    # The first one is redshift values, the second one is distance values.
+
+    # 4.3---Testing and Comment
+    """
+        Parameter Declaration:
+        redshift: Usually from 0-1.
+        n: The number of points, no unit.
+
+        Methods:
+        .cumulativeTrapezoid Returns 2 arrays.
+        The first one including redshift values at each step, the second one including distances(Mpc) at each step.
+    """
     def cTPlot(z,dArray):
+        #Testing Plot
         plt.clf()
         plt.plot(z,dArray)
         plt.title(f'Distance versus Redshift')
         plt.xlabel('redshift')
         plt.ylabel('Distance(mpc)')
         plt.savefig('cTPlot.png')
-    
-    z,dArray = newCosmology.cumulativeTrapezoid(1,50)
-    cTPlot(z,dArray)
+    #cTPlot(newCosmology.cumulativeTrapezoid(1,50))
 
-    # 4.3---Interpolator and Testing
-    f = interp1d(np.array(z),np.array(dArray)) #Function Created by Interpolation
-    def ICD(zArray):
-        ICDarray=[]
-        for z in zArray:
-            ICDarray.append(f(z))
-        return array.array('d',ICDarray)
-    
-    def ICDPlot(zArray,z,dArray):
+
+    # 4.3---Distance and Moduli Calculation by Interpolation
+    """
+        Parameter Declaration:
+        zArray: A redshift array in any order
+
+        Methods:
+        .ICD Returns A distances(Mpc) array respectively to each redshift value.
+        .ICM Returns A modulus array respectively to each redshift value. 
+    """
+
+    # 4.4---Moduli Ploting and Exploration
+    zArray = array.array('d',[x*1/100 for x in range(50,100)]) #Testing redshift values
+
+    def ICMPlot():
         plt.clf()
-        plt.plot(z,dArray)
-        plt.scatter(zArray,ICD(zArray),s=10)
-        plt.title(f'Interpolated Distance versus Redshift')
-        plt.xlabel('redshift')
-        plt.ylabel('Distance(mpc)')
-        plt.savefig('ICDPlot.png')
-
-    zArray = array.array('d',[x*1/100 for x in range(1,100)])
-    ICDPlot(zArray,z,dArray)
-
-    # 4.3---Moduli and Testing
-    Omega_k = newCosmology.Omega_k
-    Omega_m = newCosmology.Omega_m
-    Omega_lambda = newCosmology.Omega_lambda
-    H0 = newCosmology.H0
-
-    def ICM(zArray,Omega_k,H0,megaParsecs):
-        ICMarray=[]
-        for z in zArray:
-            x = Omega_k**0.5*H0/(3*10**8)*f(z)
-            if Omega_k > 0:
-                s=np.sinh(x)
-            elif Omega_k == 0:
-                s=x
-            elif Omega_k < 0:
-                s=np.sin(x)
-            DL = (1+z)*3*10**8/H0*1/(abs(Omega_k)**0.5)*s
-            u = 5*np.log10(DL/megaParsecs)+25
-            ICMarray.append(u)
-        return array.array('d',ICMarray)
-
-    # 4.4---Ploting and Exploration
-    def ICMPlot(zArray,ICMArray):
-        plt.clf()
-        plt.plot(zArray,ICMArray)
-        plt.title(f'Moduli versus Redshift (H0:{H0},Omega_m:{Omega_m}, Omega_lambda:{Omega_lambda})')
-        plt.xlabel('redshift')
-        plt.ylabel('Moduli')
-        pngName = f'ICMPlot({H0},{Omega_m},{Omega_lambda}).png'
+        for i in range(1,7):
+            plt.plot(zArray,Cosmology(73,0.05*i,0.6).ICM(zArray,1))
+        plt.title(f'Modulus versus Redshift')
+        plt.xlabel('Redshift')
+        plt.ylabel('Modulus')
+        pngName = f'ICMPlotM.png'
         plt.savefig(pngName)
-
-    ICMPlot(zArray,ICM(zArray,Omega_k,H0,1))
+    ICMPlot()
 
 
 
