@@ -10,12 +10,11 @@ class Cosmology:
             self.Omega_m = Omega_m
             self.Omega_lambda = Omega_lambda
             self.Omega_k = 1-Omega_m-Omega_lambda
-            self.Omega_m_h_square = Omega_m*(H0/100)**2
-            self.ifFlat = "true" if self.Omega_k==0 else "false"
-            self.modelDescribe = f"Cosmology with H0={H0}, Omega_m={Omega_m}, Omega_lambda={Omega_lambda}, Omega_k={self.Omega_k}"
+            self.lightspeed = 2.9979*10**5
+            self.megaParsec = 1
 
         def finalFormula(self,x):
-            return (3*10**5)/self.H0*(self.Omega_m*(1+x)**3+self.Omega_k*(1+x)**2+self.Omega_lambda)**(-0.5)   
+            return (self.lightspeed)/self.H0*(self.Omega_m*(1+x)**3+self.Omega_k*(1+x)**2+self.Omega_lambda)**(-0.5)   
 
         def cumulativeTrapezoid(self,redshift,n):
             dx = redshift/(n-1)
@@ -28,30 +27,27 @@ class Cosmology:
             distances = array.array('d',d)
             return redshifts,distances
         
-        def ICD(self,zArray):
-        #Input a redshift array into this method to get distance array calculated by interoplation
-            z,dArray = self.cumulativeTrapezoid(1,50)
-            f = interp1d(np.array(z),np.array(dArray))
-            ICDarray=[]
-            for z in zArray:
-                ICDarray.append(f(z))
-            return array.array('d',ICDarray)
-        
-        def ICM(self,zArray,megaParsecs,N):
+        def ICM(self,zArray,N):
         #Input a redshift array into this method to get moduli array calculated by interpolation
         #N is the interpolation number
             z,dArray = self.cumulativeTrapezoid(2.3,N)
             f = interp1d(np.array(z),np.array(dArray))
             ICMarray=[]
             for z in zArray:
-                x = abs(self.Omega_k)**0.5*self.H0/(3*10**8)*f(z)
+                DL = 0
+                x = abs(self.Omega_k)**0.5*self.H0/(self.lightspeed)*f(z)
                 if self.Omega_k > 0:
-                   s=np.sinh(x)
+                   DL = (1+z)*self.lightspeed/self.H0*1/(abs(self.Omega_k)**0.5)*np.sinh(x)
                 elif self.Omega_k == 0:
-                   s=x
+                   DL = (1+z)*f(z)
                 elif self.Omega_k < 0:
-                   s=np.sin(x)
-                DL = (1+z)*3*10**8/self.H0*1/(abs(self.Omega_k)**0.5)*s
-                u = 5*np.log10(DL/megaParsecs)+25
+                   DL = (1+z)*self.lightspeed/self.H0*1/(abs(self.Omega_k)**0.5)*np.sin(x)
+                u = 5*np.log10(DL/self.megaParsec)+25
                 ICMarray.append(u)
             return array.array('d',ICMarray)
+
+"""        
+cosmology0 = Cosmology(70,0.3,0.7)
+moduliArray = cosmology0.ICM([0.5,1,1.5],100)
+print(moduliArray)
+"""
