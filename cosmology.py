@@ -46,8 +46,4 @@ class Cosmology:
                 ICMarray.append(u)
             return array.array('d',ICMarray)
 
-"""        
-cosmology0 = Cosmology(70,0.3,0.7)
-moduliArray = cosmology0.ICM([0.5,1,1.5],100)
-print(moduliArray)
-"""
+
